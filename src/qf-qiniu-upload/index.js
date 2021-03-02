@@ -1,5 +1,5 @@
-import QfQiniuUpload from './qf-qiniu-upload';
+import qfQiniuUpload from './qf-qiniu-upload';
 
-QfQiniuUpload.install = Vue => Vue.component(QfQiniuUpload.name, QfQiniuUpload);//注册组件
+qfQiniuUpload.install = Vue => Vue.component(qfQiniuUpload.name, qfQiniuUpload);//注册组件
 
-export default QfQiniuUpload;
+export default qfQiniuUpload;
