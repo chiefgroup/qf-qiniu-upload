@@ -1,7 +1,7 @@
 {
   "name": "qf-qiniu-upload",
   "description": "A Vue.js project",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "jiangyuchao <164851219@qq.com>",
   "license": "MIT",
   "private": false,
