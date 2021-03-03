@@ -2,12 +2,12 @@ var path = require('path')
 var webpack = require('webpack')
 
 module.exports = {
-  entry: process.env.NODE_ENV === 'production' ? './src/qf-qiniu-upload/index.js' : './src/main.js',
+  entry: process.env.NODE_ENV === 'production' ? './src/packages/index.js' : './src/main.js',
   output: {
     path: path.resolve(__dirname, './dist'),
     publicPath: '/dist/',
-    filename: 'qfQiniuUpload.js',
-    library: 'qfQiniuUpload', // 指定的就是你使用require时的模块名
+    filename: 'qfUpload.js',
+    library: 'qfUpload', // 指定的就是你使用require时的模块名
     libraryTarget: 'umd', // 指定输出格式
     umdNamedDefine: true // 会对 UMD 的构建过程中的 AMD 模块进行命名。否则就使用匿名的 define
   },

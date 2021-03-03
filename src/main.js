@@ -1,12 +1,16 @@
 import Vue from 'vue'
 import App from './App.vue'
 
-import ElementUI from 'element-ui';
+import { Button, Upload, Notification, Message } from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
 
-Vue.use(ElementUI)
+Vue.use(Button)
+Vue.use(Upload)
 
 Vue.config.productionTip = false
+
+Vue.prototype.$notify = Notification;
+Vue.prototype.$message = Message;
 
 new Vue({
   el: '#app',

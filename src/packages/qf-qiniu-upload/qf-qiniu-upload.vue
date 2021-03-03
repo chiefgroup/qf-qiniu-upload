@@ -16,22 +16,22 @@
         :file-list="imgList"       
         drag
         multiple>
-        <el-button size="small" type="primary">{{title}}</el-button>
+        <el-button size="mini" type="primary">{{title}}</el-button>
         <div slot="tip" class="annotation">PS: 单个文件不能大于{{ maxSize }}M</div>
       </el-upload>
     </div>
 
     <div style="display: none;">
-      <img ref="adjLogo" class="adj-logo" src="">
+      <img ref="qfUploadLogo" class="qf-upload-logo" :src="watermarkImg || '../../assets/qf_logo.png'">
     </div>
   </div>
 </template>
 
 <script>
-import paste from '../directive/el-paste' // paste directive
+import paste from '../../directive/el-paste' // paste directive
 
 export default {
-  name: 'qf-qiniu-upload',
+  name: 'QfQiniuUpload',
   directives: { paste },
   props: {
     orderId: {   // 订单的ID， 文件关联的订单
@@ -70,6 +70,10 @@ export default {
     watermark: {  // 水印
       type: Boolean,
       default: true
+    },
+    watermarkImg: {
+      type: String,
+      default: ''
     }
   },
   data() {
@@ -90,7 +94,8 @@ export default {
   },
   methods: {
     upNumAddSub(n){
-      this.$emit('update:upNum', n)
+      let num = this.upNum + n
+      this.$emit('update:upNum', num)
     },
     handleRemove(file, fileList) {
       // this.fileList = fileList
@@ -152,7 +157,7 @@ export default {
     },
     uploadFiles(params, type) {
       let that = this
-      this.upNumAddSub(this.upNum + 1)
+      this.upNumAddSub(1)
       that.showFileList = true
       let file = '', key = '', name = '';
       let dirName = process.env.VUE_APP_TITLE === 'stage' ? `${this.dir}_dev` : this.dir
@@ -222,7 +227,7 @@ export default {
           }
         },
         error (err) {
-          that.upNumAddSub(this.upNum - 1)
+          that.upNumAddSub(-1)
           that.$notify.closeAll()
           that.$notify.error(`"${name}"上传失败`)
           that.imgList.forEach((element, i) => {
@@ -233,7 +238,7 @@ export default {
           // console.log('错误信息', err)
         },
         complete (res) {
-          that.upNumAddSub(this.upNum - 1)
+          that.upNumAddSub(-1)
           //完成后的操作
           //上传成功以后会返回key 和 hash  key就是文件名了！
           // that.showFileList = false
@@ -262,7 +267,7 @@ export default {
 
     /* 图片压缩方法-canvas压缩 */
     compressUpload(image, file, multiple) {
-      var logoImg = this.$refs.adjLogo
+      var logoImg = this.$refs.qfUploadLogo
       let canvas = document.createElement('canvas')
       let ctx = canvas.getContext('2d')
       let initSize = image.src.length
@@ -415,35 +420,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-.upload-index >>> .el-upload {
-  width: 100%;
-}
-
-.upload-index >>> .el-upload .el-upload-dragger {
-  width: 100%;
-  height: auto;
-  border: none;
-  text-align: left;
-}
-
-.annotation{
-  color: #999;
-  font-size: 12px;
-}
-
-.upload-box{
-  border: 1px solid #a9a9a9;
-  border-radius: 6px;
-  padding: 0 5px 5px;
-  text-align: left;
-}
-.upload-box > p {
-  font-size: 12px;
-  line-height: 14px;
-}
-.upload-fo{
-  border: 1px solid #409eff;
-}
-</style>
