@@ -1,21 +1,37 @@
 <template>
   <div id="app">
     <!-- 七牛上传组件 -->
-    <QfQiniuUpload :upNum.sync="upNum" @qiniuFn="qiniuFunction" @getBig="getBig" />
-    <QfUpload :upNum.sync="upNum" @uploadsFile="uploadsFile" @delUploadsFile="delUploadsFile" />
+    <QfQiniuUpload
+      :upNum.sync="upNum"
+      @successCallback="qiniuFunction"
+      :watermarkConfig="watermarkConfig"
+      :fileList="fileList"
+      :qiniuToken="qiniuToken"
+      :qiniuView="qiniuView"
+      @getBig="getBig"
+    />
+    <!-- <QfUpload :upNum.sync="upNum" @uploadsFile="uploadsFile" @delUploadsFile="delUploadsFile" /> -->
   </div>
 </template>
 
 <script>
-import QfQiniuUpload from '../src/packages/qf-qiniu-upload'
-import QfUpload from '../src/packages/qf-upload'
+// import QfQiniuUpload from './packages/qf-qiniu-upload'
+// import QfUpload from './packages/qf-upload'
+import { qiniuToken, qiniuView } from './api/common'
 
 export default {
   name: 'app',
-  components: { QfQiniuUpload, QfUpload },
+  // components: { QfQiniuUpload, QfUpload },
   data() {
     return {
-      upNum: 0 // 判断上传是否完成
+      qiniuToken: qiniuToken,
+      qiniuView: qiniuView,
+      fileList: [],
+      upNum: 0, // 判断上传是否完成
+      watermarkConfig: {
+        title: '这是一段测试文字',
+        img: require("../src/assets/logo2.png")
+      }
     }
   },
   mounted() {
@@ -23,6 +39,7 @@ export default {
   methods: {
     qiniuFunction(cb) {
       // 执行请求
+      console.log('成功回调：', cb)
     },
     getBig(data, type) {
       // 处理回调数据
@@ -38,15 +55,15 @@ export default {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.upload-index .el-upload {
-  width: 100%;
-}
-
 .upload-index .el-upload .el-upload-dragger {
-  width: 100%;
+  width: auto;
   height: auto;
   border: none;
   text-align: left;
+}
+
+.upload-index :focus{
+  outline: none;
 }
 
 .annotation{
@@ -69,9 +86,13 @@ export default {
 }
 
 .qf-upload-logo{
-  width: 93px;
-  height: 36px;
-  opacity: 0.1;
+  height: 0; 
+  overflow: hidden;
+}
+
+.qf-upload-logo img{
+  max-width: 93px;
+  max-height: 36px;
 }
 
 .view-img{
@@ -80,5 +101,9 @@ export default {
 
 .view-img img{
   max-width: 100%;
+}
+
+.upload-fo{
+  border: 1px solid #409eff;
 }
 </style>

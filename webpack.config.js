@@ -53,9 +53,23 @@ module.exports = {
     extensions: ['*', '.js', '.vue', '.json']
   },
   devServer: {
-    historyApiFallback: true,
-    noInfo: true,
-    overlay: true
+    // historyApiFallback: true,
+    // noInfo: true,
+    // overlay: true
+    // open: true,
+    overlay: {
+      warnings: false,
+      errors: true
+    },
+    proxy: {
+      '/apiTest': {
+        target: 'http://test.operation.chiefgr.com/',
+        changeOrigin: true,
+        pathRewrite: {
+          '^/apiTest': ''
+        }
+      }
+    }
   },
   performance: {
     hints: false

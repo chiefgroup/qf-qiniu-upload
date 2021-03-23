@@ -1,7 +1,7 @@
 {
   "name": "qf-upload",
-  "description": "A Vue.js project",
-  "version": "1.0.3",
+  "description": "基于element-ui上传组件的二次开发，增加了剪贴上传，以及七牛云上传（3.x版本）",
+  "version": "1.1.0",
   "author": "jiangyuchao <164851219@qq.com>",
   "license": "MIT",
   "private": false,
@@ -10,6 +10,10 @@
     "dev": "cross-env NODE_ENV=development webpack-dev-server --open --hot",
     "build": "cross-env NODE_ENV=production webpack --progress --hide-modules"
   },
+  "files": [
+    "dist",
+    "src"
+  ],
   "dependencies": {
     "axios": "^0.21.1",
     "element-ui": "^2.15.1",
