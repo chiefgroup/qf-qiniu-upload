@@ -53,10 +53,7 @@ module.exports = {
     extensions: ['*', '.js', '.vue', '.json']
   },
   devServer: {
-    // historyApiFallback: true,
-    // noInfo: true,
-    // overlay: true
-    // open: true,
+    port: 9500,
     overlay: {
       warnings: false,
       errors: true
@@ -87,7 +84,7 @@ if (process.env.NODE_ENV === 'production') {
       }
     }),
     new webpack.optimize.UglifyJsPlugin({
-      sourceMap: true,
+      sourceMap: false,
       compress: {
         warnings: false
       }

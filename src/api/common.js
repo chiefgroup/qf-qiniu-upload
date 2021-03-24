@@ -17,3 +17,23 @@ export function qiniuView(params){
     params
   })
 }
+
+// 上传（新）
+export function uploadsFile(data, fn1, onUploadProgress) {
+  return request({
+    url: '/api/upload',
+    method: 'post',
+    data,
+    cancelToken: fn1, // 取消请求的方法
+    onUploadProgress,  // 文件上传进度条显示方法
+    timeout: 60000
+  })
+}
+
+// 删除上传的文件
+export function delUploadsFile(id) {
+  return request({
+    url: `/api/upload/${id}`,
+    method: 'delete'
+  })
+}

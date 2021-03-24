@@ -14,7 +14,7 @@
         :limit="num"
         :on-change="handleChange"
         :on-exceed="handleExceed"
-        :file-list="imgList"
+        :file-list="fileList"
         drag
         multiple>
         <el-button size="mini" type="primary">{{title}}</el-button>
@@ -34,110 +34,103 @@
       :limit="num"
       :on-change="handleChange"
       :on-exceed="handleExceed"
-      :file-list="imgList"
+      :file-list="fileList"
       drag
       multiple>
       <el-button size="mini" type="primary">{{title}}</el-button>
       <div slot="tip" class="annotation">PS: 只能上传pdf, 文件不能大于{{ maxSize }}M</div>
     </el-upload>
 
-    <el-dialog append-to-body :visible.sync="dialogVisible">
-      <div class="view-img">
-        <img :src="dialogImageUrl" alt="">
-      </div>
-    </el-dialog>
+    <div class="qf-upload-logo">
+      <img v-if="watermarkConfig.img" ref="qfUploadLogo" :src="watermarkConfig.img">
+      <img v-else ref="qfUploadLogo" src="../../assets/qf_logo.png">
+    </div>
 
-    <div style="display: none;">
-      <img ref="qfUploadLogo" class="qf-upload-logo" :src="watermarkImg || '../../assets/qf_logo.png'">
+    <!-- 图片预览 -->
+    <div class="qifu-view" v-if="showViewer">
+      <span class="qifu-view-close" @click="closeViewer">&#215;</span>
+      <img :src="srcUrl">
     </div>
   </div>
 </template>
 
 <script>
+import { openLink } from '../../utils/index'
 import axios from "axios";
 const CancelToken = axios.CancelToken;
-
-// import { uploadsFile } from '@/api/user'
 import paste from '../../directive/el-paste'
 
 export default {
   name: 'QfUpload',
   directives: { paste },
   props: {
-    isImg: { type: Boolean, default: true }, // 是否可上传图片文件
-    title: { type: String, default: '点击/拖拽到此上传' },
-    imgList: {
-      type: Array,
-      default: []
+    fileType: { type: String, default: '' }, // 上传文件类型： jpg|pdf (只能限制jpg|pdf)
+    maxSize: { type: Number, default: 20 }, // 限制上传文件大小 default:500
+    title: { type: String, default: '点击/拖拽到此上传' }, // 文件上传标题
+    fileList: { type: Array, default: () => [] },
+    dir: { type: String, default: 'dev' }, // 上传文件地址
+    num: { type: Number, default: 9 }, // 最大上传数量 (0|null 则不限制)
+    upNum: { type: Number, default: 0 }, // 判断是否在上传中...
+    rename: { type: String, default: '' }, // 判断是否需要给上传的文件重命名
+    private: { type: Number, default: 1 }, // 文件是否私有  default 是
+    watermark: { type: Boolean, default: true }, // 水印
+    watermarkConfig: { // 水印配置  { title: '', img:'' }
+      type: Object, 
+      default: () => ({
+        title: '电商服务大平台',
+        img: ''
+      })
     },
-    dir: {   // 上传文件的位置
-      type: String,
-      default: 'dev'
-    },
-    num: {   //  最大文件数
-      type: Number,
-      default: 9
-    },
-    delserver: {   // 判断是否能删除服务器的文件
-      type: Boolean,
-      default: true
-    },
-    uploadName: {  // 文件分类
-      //  20 付款申请文件； 21 付款审核文件； 22 退款审核文件； 23 开票审核文件; 24 文件夹
-      type: String,
-      default: ''
-    },
-    uploadStatus: {   // 文件对应的状态
-      default: ''
-    },
-    private: {   // 文件是否私有  default 是
-      type: Number,
-      default: 1
-    },
-    watermark: {  // 水印
-      type: Boolean,
-      default: true
-    },
-    watermarkImg: {
-      type: String,
-      default: ''
+    uploadsFile: Function, // 上传请求
+    previewFile: Function, // 预览方法
+  },
+  computed: {
+    isImg() { // 判断是否可上传图片文件
+      if(!this.fileType || this.fileType.toLowerCase().indexOf('jpg') !== -1){
+        return true
+      }
+      return false
     }
   },
   data() {
     return {
-      maxSize: 20,
-      fileList: [],
       cancelList: [], // 请求列表
-      dialogImageUrl: '',
-      dialogVisible: false,
       uploadFoces: false,
+      showViewer: false,
+      srcUrl: ''
     }
-  },
-  created () {
   },
   mounted() {
     this.cancelList = []
+    // conosle.log(ElImageViewer)
   },
   methods: {
     upNumAddSub(n){
       let num = this.upNum + n
       this.$emit('update:upNum', num)
     },
+    closeViewer () {
+      this.showViewer = false
+    },
     handlePictureCardPreview(file) {
-      if(file.full_path){
-        if(this.isImg){
-          this.dialogImageUrl = file.full_path;
-          this.dialogVisible = true;
+      if(this.previewFile){
+        this.previewFile(file)
+      }else{
+        console.log('预览', file)
+        let name = file.name
+        let fileType = name.substr(name.lastIndexOf(".") + 1)
+        if('jpg|jpeg|png'.indexOf(fileType) !== -1){
+          this.srcUrl = file.full_path
+          this.showViewer = true
         }else{
-          this.openBlank(file.full_path)
+          openLink(file.full_path)
         }
       }
     },
-    handleRemove(file, fileList) {
-      // this.fileList = fileList
-      for(var i in this.imgList){
-        if(file.id == this.imgList[i].id){
-          this.imgList.splice(i,1)
+    handleRemove(file) {
+      for(var i in this.fileList){
+        if(file.id == this.fileList[i].id){
+          this.fileList.splice(i,1)
         }
       }
       this.$refs.upload.abort(); //取消上传
@@ -148,11 +141,11 @@ export default {
         }
       }
       // 删除服务器文件操作
-      if(this.delserver && file.id){
+      if(file.id){
         this.$emit('delUploadsFile', file.id)
       }
     },
-    beforeRemove(file, fileList) {
+    beforeRemove(file) {
       if (file && file.status==="success") {
         return this.$confirm(`确定移除当前文件？`)
       }
@@ -161,95 +154,82 @@ export default {
       this.$message.warning(`当前限制选择 ${this.num} 个文件，本次选择了 ${files.length} 个文件，共选择了 ${files.length + fileList.length} 个文件`)
     },
     beforeAvatarUpload(file) {
-      let _this = this
       return new Promise((resolve, reject) => {
         let size = file.size / 1024 / 1024
         let isLtM = size < this.maxSize // 判定文件大小是否小于 this.maxSize
-        let isJPG = (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/png');
-        let isPDF = file.type === 'application/pdf'
         if(!isLtM) {
           this.$message.warning(`文件大小不能超过${this.maxSize}M`)
           reject()
         }
-        if(this.isImg){
-          if(this.dir == 'contract'){
-            if(!isJPG && !isPDF) {
-              this.$message.warning('请上传图片或者PDF类型的合同文件')
-              reject()
+        let isJPG = (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/png');
+        let isPDF = file.type === 'application/pdf'
+        let fileType = this.fileType.toLowerCase()
+        if(fileType){
+          if(fileType.indexOf('jpg') !== -1 && isJPG){
+            /* ---------------- 图片文件压缩&水印处理 --------------- */
+            let size = file.size / 1024 / 1024
+            let isSize = 1 // 判断文件是否需要压缩
+            if(size > 2 && size <= 5){
+              isSize = 0.9
+            }else if(size > 5 && size <= 10){
+              isSize = 0.8
+            }else if(size > 10){
+              isSize = 0.7
             }
-          }
-          let isSize = 1 // 判断文件是否需要压缩
-          if(size > 2 && size <= 5){
-            isSize = 0.9
-          }else if(size > 5 && size <= 10){
-            isSize = 0.8
-          }else if(size > 10){
-            isSize = 0.7
-          }
-          if(isJPG && isSize){
-            let image = new Image(), resultBlob = '';
-            image.src = URL.createObjectURL(file);
-            image.onload = () => {
-              // 调用方法获取blob格式，方法写在下边
-              resultBlob = _this.compressUpload(image, file, isSize);
-              resolve(resultBlob)
+            if(isSize !== 1 || this.watermark){
+              let image = new Image();
+              image.src = URL.createObjectURL(file);
+              image.onload = () => {
+                // 调用方法获取blob格式，方法写在下边
+                file = this.compressUpload(image, file, isSize);
+                resolve(file)
+              }
+              image.onerror = () => {
+                this.$message.error('获取图片资源失败，请重新上传！')
+                reject()
+              }
             }
-            image.onerror = () => {
-              reject()
-            }
-          }else{
+            /* ---------------- 图片文件压缩&水印处理 END --------------- */
+          }else if(fileType.indexOf('pdf') !== -1 && isPDF) {
             resolve(file)
           }
+          this.$message.warning(`请上传“${this.fileType}”类型的文件`)
+          reject()
         }else{
-          if(!isPDF) {
-            this.$message.warning('请PDF类型的合同文件')
-            reject()
-          }
           resolve(file)
         }
       })
     },
-    handleChange(file, fileList) {
-      for(var i in this.imgList){
-        if(this.imgList[i].uid == file.uid){
+    handleChange(file) {
+      for(var i in this.fileList){
+        if(this.fileList[i].uid == file.uid){
           return
         }
       }
-      this.imgList.push(file)
+      this.fileList.push(file)
     },
     uploadFiles(params, type) {
       let that = this
-      this.upNumAddSub(1)
-      let name = '', _file = '', uid = '', renameFile = null;
+      let name = '', _file = '';
       if(type && type == 'paste'){
         name = params.name || 'image.png'
         _file = params
-        uid = params.lastModified || new Date().getTime()
       }else{
         name = params.file.name
         _file = params.file
-        uid = params.file.uid
       }
-      if(this.dir == 'business_license'){
-        let name2 = name.split('.')
-        name = '营业执照'
-        renameFile = new File([_file], '营业执照.' + name2[1]);
+      this.upNumAddSub(1)
+      // 需要给file重命名的话
+      if(this.rename){
+        let nameType = name.substr(name.lastIndexOf(".") + 1)
+        _file = new File([_file], this.rename + nameType)
       }
+      let uid = _file.uid
       // 通过 FormData 对象上传文件
       const formData = new FormData()
-      if(renameFile){
-        formData.append('file[]', renameFile)
-      }else{
-        formData.append('file[]', _file)
-      }
+      formData.append('file[]', _file)
       formData.append('private', this.private)
-      let dirName = process.env.VUE_APP_TITLE === 'stage' ? `${this.dir}_dev` : this.dir
-      formData.append('dir', dirName)
-
-      if(this.uploadName){
-        formData.append('field', this.uploadName)
-        formData.append('val', this.uploadStatus)
-      }
+      formData.append('dir', this.dir)
 
       // 创建一个变量如cancel用于存储这个请求的取消方法
       let cancelToken = new CancelToken(function executor(c) {
@@ -269,49 +249,23 @@ export default {
         type: 'info',
         duration: 0
       })
-      this.$emit('uploadsFile', {
-        formData,
-        cancelToken,
-        success: function(res) {
-          if(res.data.error_code){
-            that.$notify.error(`${name}上传失败`)
-          }else{
-            that.imgList.push(...res.data.data)
-          }
-          for(var i in that.cancelList){
-            if(that.cancelList[i].uid == uid){
-              that.cancelList.splice(i,1)
-            }
-          }
-          for(var j in that.imgList){
-            if(that.imgList[j].uid == uid){
-              that.imgList.splice(j,1)
-            }
-          }
-          ny.close()
-          that.upNumAddSub(-1)
-        },
-        error: function(err) {
-          for(var j in that.imgList){
-            if(that.imgList[j].uid == uid){
-              that.imgList.splice(j,1)
-            }
-          }
-          var iList = that.imgList.slice()
-          that.imgList.splice(0)
-          that.imgList.push(...iList)
-          ny.close()
-          that.upNumAddSub(-1)
+      this.uploadsFile(formData, cancelToken).then(res => {
+        let data = res.data.data
+        if(data instanceof Array){
+          this.fileList.push(...data)
+        }else{
+          this.fileList.push(data)
         }
+        this.uploadEnd(ny, uid)
+      }).catch(() => {
+        this.uploadEnd(ny, uid)
       })
     },
 
     /* 图片压缩方法-canvas压缩 */
     compressUpload(image, file, multiple) {
-      var logoImg = this.$refs.qfUploadLogo
       let canvas = document.createElement('canvas')
       let ctx = canvas.getContext('2d')
-      let initSize = image.src.length
       let { width, height } = image
       canvas.width = width
       canvas.height = height
@@ -320,6 +274,10 @@ export default {
       
       // 水印 logoImg
       if(this.watermark){
+        let logoImg = this.$refs.qfUploadLogo
+        let watermarkText = this.watermarkConfig.title
+        let imgW = logoImg.width
+        let imgH = logoImg.height
         ctx.rotate(-20 * Math.PI / 180)
         ctx.translate(-width/2, -height/2);
         ctx.font = '18px Vedana'
@@ -333,8 +291,8 @@ export default {
             if(i % 2 === j % 2){
               let w = i * 300;
               let h = j * 80
-              ctx.drawImage(logoImg, w - 180, h - 30, 93, 36)
-              ctx.fillText('电商服务大平台', w, h);
+              ctx.drawImage(logoImg, w - 180, h - 30, imgW, imgH)
+              ctx.fillText(watermarkText, w, h);
             }
           }
         }
@@ -345,28 +303,10 @@ export default {
 
       // 压缩后调用方法进行base64转Blob，方法写在下边
       let blobImg = this.dataURLtoFile(compressData, file.name, file.type)
-     
+      blobImg.uid = blobImg.uid || file.uid
       return blobImg
     },
     
-    /* base64转Blob对象 */
-    dataURItoBlob(data) {
-      let byteString;
-      if(data.split(',')[0].indexOf('base64') >= 0) {
-          byteString = atob(data.split(',')[1])
-      }else {
-          byteString = unescape(data.split(',')[1])
-      }
-      let mimeString = data
-          .split(',')[0]
-          .split(':')[1]
-          .split(';')[0];
-      let ia = new Uint8Array(byteString.length)
-      for( let i = 0; i < byteString.length; i += 1) {
-          ia[i] = byteString.charCodeAt(i)
-      }
-      return new Blob([ia], {type: mimeString})
-    },
     /** 
      * @method 将base64转换为file对象
      * @param {String} dataURL base64地址(必填，带base64头前缀的地址：data:image/jpeg;base64,/XXXXXXXXXX)
@@ -385,7 +325,7 @@ export default {
     // 粘贴
     handlePaste(e) {
       let _this = this
-      if(this.imgList.length >= this.num){
+      if(this.fileList.length >= this.num){
         this.$message.warning(`只能上传 ${this.num} 个文件`)
         return
       }
@@ -399,7 +339,7 @@ export default {
         })
         return;
       }
-
+      file.uid = new Date().getTime()
       let image = new Image(), resultBlob = '';
       image.src = URL.createObjectURL(file);
       image.onload = () => {
@@ -420,7 +360,101 @@ export default {
     },
     upBlur() {
       this.uploadFoces = false
+    },
+
+    // 上传结束的处理
+    uploadEnd(notifyName, uid) {
+      notifyName && notifyName.close()
+      this.upNumAddSub(-1)
+      for(var i in this.fileList){
+        if(this.fileList[i].uid == uid){
+          this.fileList.splice(i, 1)
+          break
+        }
+      }
     }
   }
 }
 </script>
+
+<style>
+.upload-index .el-upload .el-upload-dragger {
+  width: auto;
+  height: auto;
+  border: none;
+  text-align: left;
+}
+
+.upload-index :focus{
+  outline: none;
+}
+
+.annotation{
+  color: #999;
+  font-size: 12px;
+  line-height: 14px;
+}
+
+.upload-box{
+  border: 1px solid #a9a9a9;
+  border-radius: 6px;
+  padding: 5px;
+  text-align: left;
+}
+.upload-box > p {
+  font-size: 12px;
+  line-height: 14px;
+  margin: 0;
+  margin-bottom: 5px;
+}
+
+.qf-upload-logo{
+  height: 0;
+  overflow: hidden;
+}
+
+.qf-upload-logo img{
+  max-width: 93px;
+  max-height: 36px;
+}
+
+.upload-fo{
+  border: 1px solid #409eff;
+}
+
+.qifu-view{
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  background: rgba(0, 0, 0, .5);
+}
+
+.qifu-view img{
+  max-width: 100%;
+  max-height: 100%; 
+}
+
+.qifu-view-close{
+  cursor: pointer;
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  border-radius: 50%;
+  font-size: 30px;
+  color: #fff;
+  background: #606266;
+  position: absolute;
+  top: 40px;
+  right: 40px;
+  z-index: 3;
+}
+</style>

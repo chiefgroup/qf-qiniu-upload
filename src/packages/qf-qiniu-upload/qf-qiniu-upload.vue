@@ -57,7 +57,7 @@ export default {
   name: 'QfQiniuUpload',
   directives: { paste },
   props: {
-    fileType: { type: String, default: '' }, // 上传文件类型： jpg|pdf (其他类型请自己写：beforeUpload)
+    fileType: { type: String, default: '' }, // 上传文件类型： jpg|pdf (只能限制jpg|pdf)  
     maxSize: { type: Number, default: 500 }, // 限制上传文件大小 default:500
     title: { type: String, default: '文件上传' }, // 文件上传标题
     fileList: { type: Array, default: () => [] },
@@ -72,11 +72,9 @@ export default {
         img: ''
       })
     },
-    private: { type: Number, default: 1 }, // 文件是否私有  default 是
+    
     qiniuToken: Function, // 获取七牛token
     qiniuView: Function, // 七牛文件预览
-    beforeUpload: Function, // 上传前的拦截
-    successCallback: String, // 上传成功的回调函数
   },
   computed: {
     isImg() { // 判断是否可上传图片文件
@@ -113,32 +111,51 @@ export default {
       this.$message.warning(`当前限制选择 ${this.num} 个文件，本次选择了 ${files.length} 个文件，共选择了 ${files.length + fileList.length} 个文件`)
     },
     beforeAvatarUpload(file) {
-      if(this.beforeUpload) {
-        this.beforeUpload()
-      }else{
-        return new Promise((resolve, reject) => {
-          let size = file.size / 1024 / 1024
-          let isLtM = size < this.maxSize // 判定文件大小是否小于 this.maxSize
-          if(!isLtM) {
-            this.$message.warning(`文件大小不能超过${this.maxSize}M`)
-            reject()
-          }
-          let isJPG = (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/png');
-          let isPDF = file.type === 'application/pdf'
-          let fileType = this.fileType.toLowerCase()
-          if(fileType){
-            if(fileType.indexOf('jpg') !== -1 && isJPG){
-              resolve(file)
-            }else if(fileType.indexOf('pdf') !== -1 && isPDF) {
-              resolve(file)
+      return new Promise((resolve, reject) => {
+        let size = file.size / 1024 / 1024
+        let isLtM = size < this.maxSize // 判定文件大小是否小于 this.maxSize
+        if(!isLtM) {
+          this.$message.warning(`文件大小不能超过${this.maxSize}M`)
+          reject()
+        }
+        let isJPG = (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/png');
+        let isPDF = file.type === 'application/pdf'
+        let fileType = this.fileType.toLowerCase()
+        if(fileType){
+          if(fileType.indexOf('jpg') !== -1 && isJPG){
+            /* ---------------- 图片文件压缩&水印处理 --------------- */
+            let size = file.size / 1024 / 1024
+            let isSize = 1 // 判断文件是否需要压缩
+            if(size > 2 && size <= 5){
+              isSize = 0.9
+            }else if(size > 5 && size <= 10){
+              isSize = 0.8
+            }else if(size > 10){
+              isSize = 0.7
             }
-            this.$message.warning(`请上传“${this.fileType}”类型的文件`)
-            reject()
-          }else{
+            if(isSize !== 1 || this.watermark){
+              let image = new Image();
+              image.src = URL.createObjectURL(file);
+              image.onload = () => {
+                // 调用方法获取blob格式，方法写在下边
+                file = this.compressUpload(image, file, isSize);
+                resolve(file)
+              }
+              image.onerror = () => {
+                this.$message.error('获取图片资源失败，请重新上传！')
+                reject()
+              }
+            }
+            /* ---------------- 图片文件压缩&水印处理 END --------------- */
+          }else if(fileType.indexOf('pdf') !== -1 && isPDF) {
             resolve(file)
           }
-        })
-      }
+          this.$message.warning(`请上传“${this.fileType}”类型的文件`)
+          reject()
+        }else{
+          resolve(file)
+        }
+      })
     },
     handleChange(file) {
       for(var i in this.fileList){
@@ -156,32 +173,6 @@ export default {
       }else{
         file = params.file;
       }
-      /* ---------------- 图片文件压缩&水印处理 --------------- */
-      let isJPG = (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/png');
-      if(isJPG){
-        let size = file.size / 1024 / 1024
-        let isSize = 1 // 判断文件是否需要压缩
-        if(size > 2 && size <= 5){
-          isSize = 0.9
-        }else if(size > 5 && size <= 10){
-          isSize = 0.8
-        }else if(size > 10){
-          isSize = 0.7
-        }
-        if(isSize !== 1 || this.watermark){
-          let image = new Image();
-          image.src = URL.createObjectURL(file);
-          image.onload = () => {
-            // 调用方法获取blob格式，方法写在下边
-            file = this.compressUpload(image, file, isSize);
-          }
-          image.onerror = () => {
-            this.$message.error('获取图片资源失败，请重新上传！')
-            return false
-          }
-        }
-      }
-      /* ---------------- 图片文件压缩&水印处理 END --------------- */
       
       this.upNumAddSub(1)
       let name = file.name
@@ -269,7 +260,6 @@ export default {
 
     /* 图片压缩方法-canvas压缩 */
     compressUpload(image, file, multiple) {
-      var logoImg = this.$refs.qfUploadLogo
       let canvas = document.createElement('canvas')
       let ctx = canvas.getContext('2d')
       let { width, height } = image
@@ -280,6 +270,7 @@ export default {
 
       // 水印 logoImg
       if(this.watermark){
+        let logoImg = this.$refs.qfUploadLogo
         let watermarkText = this.watermarkConfig.title
         let imgW = logoImg.width
         let imgH = logoImg.height
@@ -362,17 +353,21 @@ export default {
 
     // 点击文件的钩子
     handlePreview(file) {
-      if(file.file_path){
-        openLink(file.file_path)
+      if(this.previewFile){
+        this.previewFile(file)
       }else{
-        this.qiniuView({url: file.path}).then(res => {
-          let data = res.data.data
-          openLink(data.download_url)
-        })
+        if(file.file_path){
+          openLink(file.file_path)
+        }else{
+          this.qiniuView({url: file.path}).then(res => {
+            let data = res.data.data
+            openLink(data.download_url)
+          })
+        }
       }
     },
 
-    // 上传失败的处理
+    // 上传结束的处理
     uploadEnd(notifyName, file, isSuccess, type) {
       notifyName && notifyName.close()
       this.upNumAddSub(-1)
@@ -397,3 +392,49 @@ export default {
   }
 }
 </script>
+
+<style>
+.upload-index .el-upload .el-upload-dragger {
+  width: auto;
+  height: auto;
+  border: none;
+  text-align: left;
+}
+
+.upload-index :focus{
+  outline: none;
+}
+
+.annotation{
+  color: #999;
+  font-size: 12px;
+  line-height: 14px;
+}
+
+.upload-box{
+  border: 1px solid #a9a9a9;
+  border-radius: 6px;
+  padding: 5px;
+  text-align: left;
+}
+.upload-box > p {
+  font-size: 12px;
+  line-height: 14px;
+  margin: 0;
+  margin-bottom: 5px;
+}
+
+.qf-upload-logo{
+  height: 0;
+  overflow: hidden;
+}
+
+.qf-upload-logo img{
+  max-width: 93px;
+  max-height: 36px;
+}
+
+.upload-fo{
+  border: 1px solid #409eff;
+}
+</style>
