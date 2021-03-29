@@ -61,7 +61,8 @@ export default {
     maxSize: { type: Number, default: 500 }, // 限制上传文件大小 default:500
     title: { type: String, default: '文件上传' }, // 文件上传标题
     fileList: { type: Array, default: () => [] },
-    dir: { type: String, default: 'dev' }, // 上传文件地址
+    dir: { type: String, default: '' }, // 上传文件地址
+    private: { type: Number, default: 1 }, // 文件是否私有
     num: { type: Number, default: 9 }, // 最大上传数量 (0|null 则不限制)
     upNum: { type: Number, default: 0 }, // 判断是否在上传中...
     watermark: { type: Boolean, default: true }, // 水印
@@ -213,8 +214,8 @@ export default {
       this.qiniuToken({is_private: this.private}).then(res => {
         let qiniuObj = res.data.data
         if(qiniuObj) {
-          let key = `${qiniuObj.dir}/${this.dir}/${new Date().getTime()}_${name}`; // 文件资源名
-          
+          let key = `${qiniuObj.dir || 'qiniu'}${this.dir ? '/' + this.dir : ''}/${new Date().getTime()}_${name}`; // 文件资源名
+
           let observable = qiniu.upload(file, key, qiniuObj.token, putExtra, config)
           observable.subscribe({
             next (res) {
@@ -236,6 +237,7 @@ export default {
               let uploads = {
                 id: file.uid,
                 name,
+                key,
                 path: `http://${qiniuObj.domain}/${key}`,
                 private: that.private
               }

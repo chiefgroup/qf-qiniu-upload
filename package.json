@@ -1,7 +1,7 @@
 {
   "name": "qf-upload",
   "description": "基于element-ui上传组件的二次开发，增加了剪贴上传，以及七牛云上传（3.x版本）",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "author": "jiangyuchao <164851219@qq.com>",
   "license": "MIT",
   "private": false,
