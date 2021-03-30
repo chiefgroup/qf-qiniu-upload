@@ -41,6 +41,56 @@ Vue.use(QfUpload)
 </template>
 ```
 
+```
+七牛上传流程（qf-upload：前端详情参数及方法请查看文档）
+准备工作：引入 qiniu-js  sdk  3.0版本以上
+1.选取文件（客户端）
+2.发起请求获取七牛token 
+>> 约定请求参数：用户判断文件是否为私有；示例：{ is_private: true }
+>> 约定返回结构：（组件内部的获取方式已固定，这块数据必须如下返回）
+  {
+    "data": {
+      "token": "", // token
+      "dir": "", // 上传文件的地址（拼接文件路径）
+      "domain": ""，// 上传文件的域名（拼接文件路径）
+    }
+  }
+  // 文中的 qiniuObj = res.data.data （获取七牛token返回的数据结构，）
+3. 调用七牛上传；
+qiniu.upload(file, key, qiniuObj.token, putExtra, config)
+file：文件对象
+key：// `${qiniuObj.dir || 'qiniu'}${this.dir'}/${new Date().getTime()}_${name}` // 文件资源名 加上new Date().getTime()防止文件重名
+token： qiniuObj.token
+putExtra：{fname: “文件名”, customVars: ”object，用来放置自定义变量 {'x:xxx': ''}“} // customVars 暂时不支持
+config：{
+  useCdnDomain: true, 
+  concurrentRequestLimit: 1, // 并发改为1防止分片上传失败，上传速度会受到影响
+}
+上传成功之后接口可能没有返回值，组件内部做了成功数据的组装，示例：
+  uploads = {
+    id: file.uid,
+    name,
+    key, 
+    path: `http://${qiniuObj.domain}/${key}`,
+    private: 
+  }
+  // 如果是非私有文件则直接会将文件路径path =>file_path
+  // uploads.file_path = uploads.path
+
+成功之后会调用 $emit('successCallback', uploads)，需要单独处理 uploads 可以调用 successCallback 方法
+
+4. 文件查看（组件内部的文件列表点击钩子）
+  组件提供了直接访问的方法：调用后端请求：参数为url
+  示例：qiniuView({url: file.path}).then()
+
+ 组件方法不满足则自行封装previewFile方法，示例：
+  >> 获取bucket域名（请求）【文件没有域名的时候需要这一步】
+      返回bucket域名
+  >> 获取可访问地址
+      非私有文件：bucket域名 + key
+      私有文件：bucket域名 + key 作为参数 调用 请求方法获取可访问的地址
+```
+
 属性  |  说明  |  类型  |  默认值
 :-------: | -------  |  :-------:  |  :-------:
 fileType  |  上传文件类型： jpg|pdf (只能限制jpg|pdf)  |  String  |  ''
