@@ -146,3 +146,5 @@ delUploadsFile  |  服务器文件删除回调 $emit('delUploadsFile', id)  |  F
 PS: previewFile(文件预览)：默认方法限定了返回参数，不满足需要的请自定义
 
 作者wx: jiang164851219
+
+> github地址: https://github.com/chiefgroup/qf-qiniu-upload

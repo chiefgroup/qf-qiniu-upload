@@ -1,9 +1,16 @@
 .DS_Store
+# 忽略目录
 node_modules/
+public/
 src/
+
+# 忽略指定文件
 npm-debug.log
 yarn-error.log
 package-lock.json
+webpack.config.js
+favicon.ico
+index.html
 
 # Editor directories and files
 .idea
