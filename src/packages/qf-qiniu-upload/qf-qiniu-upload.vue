@@ -230,6 +230,7 @@ export default {
 
       //开始上传
       this.upNumAddSub(1)
+      let uid = file.uid
       let notifyName = null
       setTimeout(() => {
         notifyName = this.$notify({
@@ -255,15 +256,14 @@ export default {
               }
             },
             error (err) {
-              that.uploadEnd(notifyName, file.uid)
+              that.uploadEnd(notifyName, uid)
               that.$notify.error(`"${name}"上传失败`)
             },
             complete (res) {
               //完成后的操作
               //上传成功以后会返回key 和 hash  key就是文件名了！
               let uploads = {
-                id: file.uid,
-                uid: file.uid,
+                id: uid, // 默认上传成功的文件都应该有ID存在
                 name,
                 key,
                 path: `http://${qiniuObj.domain}/${key}`,
@@ -273,7 +273,7 @@ export default {
                 uploads.file_path = uploads.path
               }
 
-              that.uploadEnd(notifyName, uploads.uid)
+              that.uploadEnd(notifyName, uid)
               that.$notify.success(`"${name}"上传成功`)
               // 重新push上传成功的文件
               that.fileList.push(uploads)
@@ -286,7 +286,7 @@ export default {
           // subscription.unsubscribe(); // 终止上传行为
         }
       }).catch(() => {
-        this.uploadEnd(notifyName, file.uid)
+        this.uploadEnd(notifyName, uid)
       })
     },
 
@@ -391,7 +391,7 @@ export default {
         if(file.file_path){
           openLink(file.file_path)
         }else{
-          this.qiniuView({url: file.path}).then(res => {
+          this.qiniuView({url: encodeURI(file.path)}).then(res => {
             let data = res.data.data
             openLink(data.download_url)
           })
