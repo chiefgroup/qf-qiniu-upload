@@ -57,7 +57,8 @@ export default {
   name: 'QfQiniuUpload',
   directives: { paste },
   props: {
-    fileType: { type: String, default: '' }, // 上传文件类型： jpg|pdf (只能限制jpg|pdf)  
+    // 文件类型限制 image|pdf|txt|video|audio|xls|xlsx|zip|rar|ppt
+    isFileType: { type: String, default: '' }, 
     maxSize: { type: Number, default: 500 }, // 限制上传文件大小 default:500
     title: { type: String, default: '文件上传' }, // 文件上传标题
     fileList: { type: Array, default: () => [] },
@@ -78,11 +79,11 @@ export default {
     qiniuView: Function, // 七牛文件预览
   },
   computed: {
-    isImg() { // 判断是否可上传图片文件
-      if(!this.fileType || this.fileType.toLowerCase().indexOf('jpg') !== -1){
-        return true
+    isImg() {
+      if(this.isFileType && this.isFileType.indexOf('image') === -1){
+        return false
       }
-      return false
+      return true
     }
   },
   data() {
@@ -95,13 +96,17 @@ export default {
       let num = this.upNum + n
       this.$emit('update:upNum', num)
     },
-    handleRemove(file) {
-      for(var i in this.fileList){
-        if(file.id == this.fileList[i].id){
-          this.fileList.splice(i,1)
+    handleRemove(file, fileList) {
+      if(file.id){ // 已经上传成功的文件
+        for(var i in this.fileList){
+          if(file.id == this.fileList[i].id){
+            this.fileList.splice(i,1)
+          }
         }
+      }else if(file.uid){
+        this.uploadEnd(null, file.uid)
+        this.$refs.upload.abort(file); //取消上传
       }
-      this.$refs.upload.abort(); //取消上传
     },
     beforeRemove(file) {
       if(file && file.status === 'success'){
@@ -119,40 +124,60 @@ export default {
           this.$message.warning(`文件大小不能超过${this.maxSize}M`)
           reject()
         }
-        let isJPG = (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/png');
-        let isPDF = file.type === 'application/pdf'
-        let fileType = this.fileType.toLowerCase()
-        if(fileType){
-          if(fileType.indexOf('jpg') !== -1 && isJPG){
-            /* ---------------- 图片文件压缩&水印处理 --------------- */
-            let size = file.size / 1024 / 1024
-            let isSize = 1 // 判断文件是否需要压缩
-            if(size > 2 && size <= 5){
-              isSize = 0.9
-            }else if(size > 5 && size <= 10){
-              isSize = 0.8
-            }else if(size > 10){
-              isSize = 0.7
+        /** 文件类型判断
+        * image(jpg/jpeg/png) => image/*  => /^image\//.test()
+        */
+        let fileType = file.type
+        let fileName = file.name.substring(file.name.lastIndexOf('.'))
+        let isFileObj = {
+          image: /^image\//.test(fileType),
+          pdf: fileType === 'application/pdf',
+          txt: /^text\//.test(fileType),
+          video: /^video\//.test(fileType),
+          audio: /^video\//.test(fileType),
+          xls: fileType === 'application/vnd.ms-excel',
+          xlsx: fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          zip: /^application\/.*zip/.test(fileType),
+          rar: fileName === '.rar',
+          ppt: fileName === '.ppt' || fileName === '.pptx',
+        }
+        if(this.isFileType){
+          let isFileType = this.isFileType.split('|') // image|pdf|txt
+          let isFileBool = false
+          for(var v of isFileType){
+            if(isFileObj[v]){
+              isFileBool = true
+              break
             }
-            if(isSize !== 1 || this.watermark){
-              let image = new Image();
-              image.src = URL.createObjectURL(file);
-              image.onload = () => {
-                // 调用方法获取blob格式，方法写在下边
-                file = this.compressUpload(image, file, isSize);
-                resolve(file)
-              }
-              image.onerror = () => {
-                this.$message.error('获取图片资源失败，请重新上传！')
-                reject()
-              }
+          }
+          if(!isFileBool){
+            this.$message.warning(`只能上传${isFileType}类型的文件！`)
+            return reject()
+          }
+        }
+        if(isFileObj.image){
+          let isSize = 1 // 判断文件是否需要压缩
+          if(size > 2 && size <= 5){
+            isSize = 0.9
+          }else if(size > 5 && size <= 10){
+            isSize = 0.8
+          }else if(size > 10){
+            isSize = 0.7
+          }
+          if(isSize < 1 || this.watermark){
+            let image = new Image(), resultBlob = '';
+            image.src = URL.createObjectURL(file);
+            image.onload = () => {
+              // 调用方法获取blob格式，方法写在下边
+              resultBlob = this.compressUpload(image, file, isSize);
+              resolve(resultBlob)
             }
-            /* ---------------- 图片文件压缩&水印处理 END --------------- */
-          }else if(fileType.indexOf('pdf') !== -1 && isPDF) {
+            image.onerror = () => {
+              reject()
+            }
+          }else{
             resolve(file)
           }
-          this.$message.warning(`请上传“${this.fileType}”类型的文件`)
-          reject()
         }else{
           resolve(file)
         }
@@ -175,7 +200,6 @@ export default {
         file = params.file;
       }
       
-      this.upNumAddSub(1)
       let name = file.name
       /*
       * config.useCdnDomain: 是否使用 cdn 加速域名，true or false，默认为 false。
@@ -205,10 +229,14 @@ export default {
       };
 
       //开始上传
-      let notifyName = this.$notify({
-        message: `"${name}"上传中...`,
-        duration: 0
-      });
+      this.upNumAddSub(1)
+      let notifyName = null
+      setTimeout(() => {
+        notifyName = this.$notify({
+          message: `"${name}"上传中...`,
+          duration: 0
+        });
+      }, 100)
 
       // 获取七牛token
       this.qiniuToken({is_private: this.private}).then(res => {
@@ -227,15 +255,15 @@ export default {
               }
             },
             error (err) {
-              that.uploadEnd(notifyName, file, false, type)
+              that.uploadEnd(notifyName, file.uid)
               that.$notify.error(`"${name}"上传失败`)
             },
             complete (res) {
               //完成后的操作
               //上传成功以后会返回key 和 hash  key就是文件名了！
-              console.log('上传成功', file)
               let uploads = {
                 id: file.uid,
+                uid: file.uid,
                 name,
                 key,
                 path: `http://${qiniuObj.domain}/${key}`,
@@ -244,9 +272,11 @@ export default {
               if(that.private !== 1){
                 uploads.file_path = uploads.path
               }
-              that.uploadEnd(notifyName, uploads, true, type)
+
+              that.uploadEnd(notifyName, uploads.uid)
               that.$notify.success(`"${name}"上传成功`)
-              
+              // 重新push上传成功的文件
+              that.fileList.push(uploads)
               // 成功后是否需要回调
               that.$emit('successCallback', uploads)
             }
@@ -256,7 +286,7 @@ export default {
           // subscription.unsubscribe(); // 终止上传行为
         }
       }).catch(() => {
-        this.uploadEnd(notifyName, file, false, type)
+        this.uploadEnd(notifyName, file.uid)
       })
     },
 
@@ -370,26 +400,16 @@ export default {
     },
 
     // 上传结束的处理
-    uploadEnd(notifyName, file, isSuccess, type) {
-      notifyName && notifyName.close()
-      this.upNumAddSub(-1)
-      if(isSuccess){
-        if(type === 'paste'){
-          this.fileList.push(file)
-          return
-        }
-        this.fileList.forEach((element, i) => {
-          if(element.uid == file.id){
-            this.fileList.splice(i, 1, file)
-          }
-        })
-      }else{
-        this.fileList.forEach((element, i) => {
-          if(element.uid == file.uid){
-            this.fileList.splice(i, 1)
-          }
-        })
+    uploadEnd(notifyName, uid) {
+      if(notifyName){
+        notifyName.close()
+        this.upNumAddSub(-1)
       }
+      this.fileList.forEach((element, i) => {
+        if(element.uid == uid){
+          this.fileList.splice(i, 1)
+        }
+      })
     }
   }
 }

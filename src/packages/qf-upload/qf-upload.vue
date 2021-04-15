@@ -64,7 +64,8 @@ export default {
   name: 'QfUpload',
   directives: { paste },
   props: {
-    fileType: { type: String, default: '' }, // 上传文件类型： jpg|pdf (只能限制jpg|pdf)
+    // 文件类型限制 image|pdf|txt|video|audio|xls|xlsx|zip|rar|ppt
+    isFileType: { type: String, default: '' },
     maxSize: { type: Number, default: 20 }, // 限制上传文件大小 default:500
     title: { type: String, default: '点击/拖拽到此上传' }, // 文件上传标题
     fileList: { type: Array, default: () => [] },
@@ -85,11 +86,11 @@ export default {
     previewFile: Function, // 预览方法
   },
   computed: {
-    isImg() { // 判断是否可上传图片文件
-      if(!this.fileType || this.fileType.toLowerCase().indexOf('jpg') !== -1){
-        return true
+    isImg() {
+      if(this.isFileType && this.isFileType.indexOf('image') === -1){
+        return false
       }
-      return false
+      return true
     }
   },
   data() {
@@ -116,7 +117,6 @@ export default {
       if(this.previewFile){
         this.previewFile(file)
       }else{
-        console.log('预览', file)
         let name = file.name
         let fileType = name.substr(name.lastIndexOf(".") + 1)
         if('jpg|jpeg|png'.indexOf(fileType) !== -1){
@@ -128,21 +128,24 @@ export default {
       }
     },
     handleRemove(file) {
-      for(var i in this.fileList){
-        if(file.id == this.fileList[i].id){
-          this.fileList.splice(i,1)
+      if(file.id){ // 已经上传成功的文件
+        for(var i in this.fileList){
+          if(file.id == this.fileList[i].id){
+            this.fileList.splice(i,1)
+          }
         }
-      }
-      this.$refs.upload.abort(); //取消上传
-      for(var i in this.cancelList){
-        if(this.cancelList[i].uid == file.uid && typeof this.cancelList[i].cancel === `function`){
-          this.cancelList[i].cancel()
-          this.cancelList.splice(i,1)
+        if(this.delserver){ // 是否删除服务器文件
+          this.$emit('delUploadsFile', file.id)
         }
-      }
-      // 删除服务器文件操作
-      if(file.id){
-        this.$emit('delUploadsFile', file.id)
+      }else if(file.uid){ // 未上传成功的调用去掉方法
+        this.uploadEnd(null, file.uid)
+        for(var i in this.cancelList){
+          if(this.cancelList[i].uid == file.uid && typeof this.cancelList[i].cancel === `function`){
+            this.cancelList[i].cancel()
+            this.cancelList.splice(i,1)
+          }
+        }
+        this.$refs.upload.abort(file); //取消上传
       }
     },
     beforeRemove(file) {
@@ -161,40 +164,60 @@ export default {
           this.$message.warning(`文件大小不能超过${this.maxSize}M`)
           reject()
         }
-        let isJPG = (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/png');
-        let isPDF = file.type === 'application/pdf'
-        let fileType = this.fileType.toLowerCase()
-        if(fileType){
-          if(fileType.indexOf('jpg') !== -1 && isJPG){
-            /* ---------------- 图片文件压缩&水印处理 --------------- */
-            let size = file.size / 1024 / 1024
-            let isSize = 1 // 判断文件是否需要压缩
-            if(size > 2 && size <= 5){
-              isSize = 0.9
-            }else if(size > 5 && size <= 10){
-              isSize = 0.8
-            }else if(size > 10){
-              isSize = 0.7
+        /** 文件类型判断
+        * image(jpg/jpeg/png) => image/*  => /^image\//.test()
+        */
+        let fileType = file.type
+        let fileName = file.name.substring(file.name.lastIndexOf('.'))
+        let isFileObj = {
+          image: /^image\//.test(fileType),
+          pdf: fileType === 'application/pdf',
+          txt: /^text\//.test(fileType),
+          video: /^video\//.test(fileType),
+          audio: /^video\//.test(fileType),
+          xls: fileType === 'application/vnd.ms-excel',
+          xlsx: fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          zip: /^application\/.*zip/.test(fileType),
+          rar: fileName === '.rar',
+          ppt: fileName === '.ppt' || fileName === '.pptx',
+        }
+        if(this.isFileType){
+          let isFileType = this.isFileType.split('|') // image|pdf|txt
+          let isFileBool = false
+          for(var v of isFileType){
+            if(isFileObj[v]){
+              isFileBool = true
+              break
             }
-            if(isSize !== 1 || this.watermark){
-              let image = new Image();
-              image.src = URL.createObjectURL(file);
-              image.onload = () => {
-                // 调用方法获取blob格式，方法写在下边
-                file = this.compressUpload(image, file, isSize);
-                resolve(file)
-              }
-              image.onerror = () => {
-                this.$message.error('获取图片资源失败，请重新上传！')
-                reject()
-              }
+          }
+          if(!isFileBool){
+            this.$message.warning(`只能上传${isFileType}类型的文件！`)
+            return reject()
+          }
+        }
+        if(isFileObj.image){
+          let isSize = 1 // 判断文件是否需要压缩
+          if(size > 2 && size <= 5){
+            isSize = 0.9
+          }else if(size > 5 && size <= 10){
+            isSize = 0.8
+          }else if(size > 10){
+            isSize = 0.7
+          }
+          if(isSize < 1 || this.watermark){
+            let image = new Image(), resultBlob = '';
+            image.src = URL.createObjectURL(file);
+            image.onload = () => {
+              // 调用方法获取blob格式，方法写在下边
+              resultBlob = this.compressUpload(image, file, isSize);
+              resolve(resultBlob)
             }
-            /* ---------------- 图片文件压缩&水印处理 END --------------- */
-          }else if(fileType.indexOf('pdf') !== -1 && isPDF) {
+            image.onerror = () => {
+              reject()
+            }
+          }else{
             resolve(file)
           }
-          this.$message.warning(`请上传“${this.fileType}”类型的文件`)
-          reject()
         }else{
           resolve(file)
         }
@@ -244,11 +267,13 @@ export default {
         let percent = (progressEvent.loaded / progressEvent.total * 100) | 0 //调用onProgress方法来显示进度条，需要传递个对象 percent为进度值
         params.onProgress({ percent:percent })
       }
-      let ny = this.$notify({
-        message: `${name}上传中...`,
-        type: 'info',
-        duration: 0
-      })
+      let ny = null
+      setTimeout(() => {
+        ny = this.$notify({
+          message: `"${name}"上传中...`,
+          duration: 0
+        });
+      }, 100)
       this.uploadsFile(formData, cancelToken).then(res => {
         let data = res.data.data
         if(data instanceof Array){
@@ -333,10 +358,7 @@ export default {
       if (e.clipboardData && e.clipboardData.items[0] && e.clipboardData.items[0].type && e.clipboardData.items[0].type.indexOf('image') > -1) { //这里就是判断是否有粘贴进来的文件且文件为图片格式
         file = e.clipboardData.items[0].getAsFile();
       }else {
-        this.$message({
-          type: 'warning',
-          message: '上传的文件必须为图片且无法复制本地图片且无法同时复制多张图片'
-        })
+        this.$message.warning('上传的文件必须为图片且无法复制本地图片且无法同时复制多张图片')
         return;
       }
       file.uid = new Date().getTime()
@@ -364,8 +386,10 @@ export default {
 
     // 上传结束的处理
     uploadEnd(notifyName, uid) {
-      notifyName && notifyName.close()
-      this.upNumAddSub(-1)
+      if(notifyName){
+        notifyName.close()
+        this.upNumAddSub(-1)
+      }
       for(var i in this.fileList){
         if(this.fileList[i].uid == uid){
           this.fileList.splice(i, 1)

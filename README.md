@@ -93,7 +93,7 @@ config：{
 
 属性  |  说明  |  类型  |  默认值
 :-------: | -------  |  :-------:  |  :-------:
-fileType  |  上传文件类型： jpg|pdf (只能限制jpg|pdf)  |  String  |  ''
+isFileType  |  上传文件类型： image|pdf|txt|video|audio|xls|xlsx|zip|rar|ppt  |  String  |  ''
 maxSize  |  限制上传文件大小  |  Number  |  500
 title  |  文件上传标题  |  String  |  文件上传'
 fileList  |  文件列表  |  Array  |  []
@@ -128,7 +128,7 @@ PS: previewFile(文件预览)：默认方法限定了返回参数，不满足需
 
 属性  |  说明  |  类型  |  默认值
 :-------: | -------  |  :-------:  |  :-------:
-fileType  |  上传文件类型： jpg|pdf (只能限制jpg|pdf)  |  String  |  ''
+isFileType  |  上传文件类型： image|pdf|txt|video|audio|xls|xlsx|zip|rar|ppt  |  String  |  ''
 maxSize  |  限制上传文件大小  |  Number  |  500
 title  |  文件上传标题  |  String  |  文件上传'
 fileList  |  文件列表  |  Array  |  []

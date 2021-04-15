@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <!-- 七牛上传组件 -->
-    <QfQiniuUpload
+    <QfQiniuUpload2
       :upNum.sync="upNum"
       @successCallback="qiniuFunction"
       :watermarkConfig="watermarkConfig"
@@ -21,13 +21,18 @@
 </template>
 
 <script>
-// import QfQiniuUpload from './packages/qf-qiniu-upload'
+import QfQiniuUpload2 from './packages/qf-qiniu-upload'
 // import QfUpload from './packages/qf-upload'
 import { qiniuToken, qiniuView, uploadsFile } from './api/common'
 
 export default {
   name: 'app',
-  // components: { QfQiniuUpload, QfUpload },
+  components: { QfQiniuUpload2 },
+  watch: {
+    upNum(newVal, oldVal) {
+      console.log('order', newVal, oldVal)
+    }
+  },
   data() {
     return {
       qiniuToken: qiniuToken,
