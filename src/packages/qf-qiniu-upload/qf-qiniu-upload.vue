@@ -77,6 +77,7 @@ export default {
     
     qiniuToken: Function, // 获取七牛token
     qiniuView: Function, // 七牛文件预览
+    previewFile: Function, // 文件预览方法
   },
   computed: {
     isImg() {
@@ -88,8 +89,13 @@ export default {
   },
   data() {
     return {
-      uploadFoces: false
+      uploadFoces: false,
+      protocol: 'https:',
     }
+  },
+  mounted() {
+    console.log(this.previewFile)
+    this.protocol = location.protocol || 'https:'
   },
   methods: {
     upNumAddSub(n){
@@ -266,7 +272,7 @@ export default {
                 id: uid, // 默认上传成功的文件都应该有ID存在
                 name,
                 key,
-                path: `http://${qiniuObj.domain}/${key}`,
+                path: `${that.protocol}//${qiniuObj.domain}/${key}`,
                 private: that.private
               }
               if(that.private !== 1){
