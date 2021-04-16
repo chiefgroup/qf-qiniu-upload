@@ -94,7 +94,6 @@ export default {
     }
   },
   mounted() {
-    console.log(this.previewFile)
     this.protocol = location.protocol || 'https:'
   },
   methods: {
@@ -102,7 +101,7 @@ export default {
       let num = this.upNum + n
       this.$emit('update:upNum', num)
     },
-    handleRemove(file, fileList) {
+    handleRemove(file) {
       if(file.id){ // 已经上传成功的文件
         for(var i in this.fileList){
           if(file.id == this.fileList[i].id){
