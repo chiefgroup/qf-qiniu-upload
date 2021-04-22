@@ -107,8 +107,11 @@ export default {
   },
   methods: {
     upNumAddSub(n){
-      let num = this.upNum + n
-      this.$emit('update:upNum', num)
+      // 程序跑太快了的bug: 导致upNum没有即使更新
+      setTimeout(() => {
+        let newNum = this.upNum + n
+        this.$emit('update:upNum', newNum)
+      }, 100)
     },
     closeViewer () {
       this.showViewer = false
