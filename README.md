@@ -72,7 +72,8 @@ config：{
     name,
     key, 
     path: `http://${qiniuObj.domain}/${key}`,
-    private: 
+    private, // 是否为私有文件 老版本参数（未移除，兼容旧版本数据）
+    is_private, // 是否为私有 新版本参数
   }
   // 如果是非私有文件则直接会将文件路径path =>file_path
   // uploads.file_path = uploads.path

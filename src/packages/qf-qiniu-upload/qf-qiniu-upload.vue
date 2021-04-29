@@ -275,7 +275,8 @@ export default {
                 name,
                 key,
                 path: `${that.protocol}//${qiniuObj.domain}/${key}`,
-                private: that.private
+                private: that.private,
+                is_private: that.private
               }
               if(that.private !== 1){
                 uploads.file_path = uploads.path
