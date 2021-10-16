@@ -60,7 +60,7 @@ module.exports = {
     },
     proxy: {
       '/apiTest': {
-        target: 'http://test.operation.chiefgr.com/',
+        target: 'http://rocket.api.jiaodianvip.com/',
         changeOrigin: true,
         pathRewrite: {
           '^/apiTest': ''

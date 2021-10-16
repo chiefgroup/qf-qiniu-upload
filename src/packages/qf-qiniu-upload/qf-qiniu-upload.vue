@@ -7,6 +7,7 @@
         class="upload-demo"
         ref="upload"
         action="container"
+        v-bind="$attrs"
         :before-upload="beforeAvatarUpload"
         :http-request="uploadFiles"
         :on-remove="handleRemove"
@@ -22,11 +23,12 @@
       </el-upload>
     </div>
 
-     <el-upload
+    <el-upload
       v-else
       class="upload-demo"
       ref="upload"
       action="container"
+      v-bind="$attrs"
       :before-upload="beforeAvatarUpload"
       :http-request="uploadFiles"
       :before-remove="beforeRemove"

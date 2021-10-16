@@ -3,7 +3,7 @@ import request from '../utils/request.js'
 // 获取七牛token
 export function qiniuToken(params){
   return request({
-    url: '/api/qiniu/upload/token',
+    url: '/api/qiniu/upload/token/new',
     method: 'get',
     params
   })

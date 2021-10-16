@@ -8,6 +8,7 @@
       :fileList="fileList"
       :qiniuToken="qiniuToken"
       :qiniuView="qiniuView"
+      list-type="picture"
     />
     <QfUpload
       :upNum.sync="upNum"
