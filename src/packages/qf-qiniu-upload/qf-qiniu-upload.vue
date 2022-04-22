@@ -45,8 +45,7 @@
     </el-upload>
 
     <div class="qf-upload-logo">
-      <img v-if="watermarkConfig.img" ref="qfUploadLogo" :src="watermarkConfig.img">
-      <img v-else ref="qfUploadLogo" src="../../assets/qf_logo.png">
+      <img ref="qfUploadLogo" :src="watermarkConfig.img">
     </div>
   </div>
 </template>
@@ -313,10 +312,14 @@ export default {
 
       // 水印 logoImg
       if(this.watermark){
-        let logoImg = this.$refs.qfUploadLogo
-        let watermarkText = this.watermarkConfig.title
-        let imgW = logoImg.width
-        let imgH = logoImg.height
+        let watermarkText = this.watermarkConfig.title;
+        let watermarkImg = this.watermarkConfig.img;
+        let logoImg, imgW, imgH;
+        if(watermarkImg){
+          logoImg = this.$refs.qfUploadLogo
+          imgW = logoImg.width
+          imgH = logoImg.height
+        }
         ctx.rotate(-20 * Math.PI / 180)
         ctx.translate(-width/2, -height/2);
         ctx.font = '18px Vedana'
@@ -330,7 +333,9 @@ export default {
             if(i % 2 === j % 2){
               let w = i * 300;
               let h = j * 80
-              ctx.drawImage(logoImg, w - 180, h - 30, imgW, imgH)
+              if(watermarkImg){
+                ctx.drawImage(logoImg, w - 180, h - 30, imgW, imgH)
+              }
               ctx.fillText(watermarkText, w, h);
             }
           }

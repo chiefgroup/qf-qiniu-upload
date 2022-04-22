@@ -102,7 +102,7 @@ dir  |  文件上传路径  |  String  |  'dev'
 num  |  最大上传数量 (0/null 则不限制)  |  Number  |  9
 upNum  |  判断是否在上传中...  |  Number  |  0
 watermark  |  水印  |  Boolean  |  true
-watermarkConfig  |  水印配置  |  Object  |  {title: '电商服务大平台', img: ''} 需要水印时，水印图必填不然会报错
+watermarkConfig  |  水印配置  |  Object  |  {title: '电商服务大平台', img: ''} 需要水印时，水印图只能为本地图片
 private  |  文件是否私有（1:私有，0：公开）  |  Number  |  1
 qiniuToken  |  (请求)获取七牛token  |  Function  |  
 qiniuView  |  (请求)七牛文件预览：针对私有文件地址  |  Function  |  成功返回download_url
@@ -138,7 +138,7 @@ dir  |  文件上传路径  |  String  |  'dev'
 num  |  最大上传数量 (0/null 则不限制)  |  Number  |  9
 upNum  |  判断是否在上传中...  |  Number  |  0
 watermark  |  水印  |  Boolean  |  true
-watermarkConfig  |  水印配置  |  Object  |  {title: '电商服务大平台', img: ''} 需要水印时，水印图必填不然会报错
+watermarkConfig  |  水印配置  |  Object  |  {title: '电商服务大平台', img: ''} 需要水印时，水印图只能为本地图片
 private  |  文件是否私有（1:私有，0：公开）  |  Number  |  1 
 uploadsFile  |  上传请求  |  Function  |  
 previewFile  |  文件预览（默认地址：file.full_path） |  Function  |  参数（file文件对象）
